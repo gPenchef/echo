@@ -15,6 +15,8 @@ npm run dev
 
 Open the local URL printed by Vite (normally `http://127.0.0.1:5173`). Desktop keyboard and mouse are the primary controls. The game has no external asset or service dependencies.
 
+Gameplay fits the browser viewport without page scrolling. The chamber keeps its aspect ratio, controls compact on smaller windows, and the timeline moves beside the chamber in short landscape windows. All twelve Echo tracks remain visible. Long menus can scroll inside their paused dialog.
+
 ```sh
 npm test             # simulation regressions and all eleven campaign solutions
 npm run typecheck

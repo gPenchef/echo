@@ -35,7 +35,7 @@ let pointerPosition: { x: number; y: number } | undefined;
 const app = $('app');
 app.innerHTML = `<header><div class="brand">ECHO<small>TEMPORAL CHAMBERS</small></div><div class="status">LOCAL RECONSTRUCTION SYSTEM · ONLINE</div></header>
 <div class="topline"><div><div class="eyebrow" id="subtitle"></div><h1 id="level-title"></h1></div><div class="clock"><small id="loop-label"></small><div class="time" id="timer">00:20.0</div></div></div>
-<div class="game-layout"><main><div id="viewport"><div id="game" aria-label="ECHO game chamber. Move with WASD or arrow keys."></div><div id="rewind"></div></div><div id="notice" role="status" aria-live="polite"></div><div class="timeline"><div class="timeline-head"><span>RECORDED TIMELINES</span><span id="timeline-scale"></span></div><div id="tracks"></div></div></main>
+<div class="game-layout"><main><div id="stage"><div id="viewport"><div id="game" aria-label="ECHO game chamber. Move with WASD or arrow keys."></div><div id="rewind"></div></div></div><div id="notice" role="status" aria-live="polite"></div><div class="timeline"><div class="timeline-head"><span>RECORDED TIMELINES</span><span id="timeline-scale"></span></div><div id="tracks"></div></div></main>
 <aside><h2>CHAMBER OBJECTIVE</h2><p class="objective" id="objective"></p><button class="primary" id="commit">Space · Create Echo</button><button id="plan">Tab · Inspect plan</button><div class="rule"><h2>OPERATOR CONTROLS</h2><div class="controls"><kbd>W A S D</kbd><span>Move / arrow keys</span><kbd>MOUSE</kbd><span>Aim · click to fire</span><kbd>E</kbd><span>Interact / carry</span><kbd>SPACE</kbd><span>Commit & hold end</span><kbd>R</kbd><span>Retry · keep Echoes</span><kbd>Q</kbd><span>Undo latest Echo</span><kbd>ESC</kbd><span>Pause / settings</span></div></div><div class="rule"><button id="hint">Chamber hint</button><button id="pause">Pause</button></div></aside></div>
 <footer><span>COOPERATE WITH YOUR PAST SELVES.</span><span id="footer-state">60 Hz · LOCAL SIMULATION</span></footer><div id="overlay" role="dialog" aria-modal="true" aria-label="Game menu"></div>`;
 
@@ -303,6 +303,7 @@ function updateHud() {
   const all = [...session.runs, w.recording];
   if (timelineWorld !== w) {
     timelineWorld = w;
+    $('tracks').style.setProperty('--track-columns', String(Math.ceil(all.length / 4)));
     $('tracks').innerHTML = all
       .map(
         (run, i) =>
@@ -519,7 +520,7 @@ class ChamberScene extends Phaser.Scene {
     }
   }
 }
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   width: 960,
   height: 560,
@@ -531,6 +532,10 @@ new Phaser.Game({
   audio: { noAudio: true },
   banner: false,
 });
+// The chamber can resize when Echo tracks change, not just on window resize.
+// Keep Phaser's pointer-to-world transform aligned with the fitted canvas.
+const gameResize = new ResizeObserver(() => game.scale.refresh());
+gameResize.observe($('game'));
 
 // Opt-in local instrumentation for replay tests and chamber authoring; absent from normal play.
 if (import.meta.env.DEV && new URLSearchParams(location.search).has('debug')) {
