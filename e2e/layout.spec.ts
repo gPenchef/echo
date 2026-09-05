@@ -1,6 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Session } from '../src/core/session';
 import type { Input } from '../src/core/types';
+import { campaign } from '../src/levels/campaign';
+import { chamberView } from '../src/view';
 
 type Debug = {
   session: Session;
@@ -26,6 +28,7 @@ async function assertFits(page: Page) {
       '#pause',
       '#timer',
       '#level-title',
+      '#chamber-map:not([hidden])',
     ]) {
       document.querySelectorAll<HTMLElement>(selector).forEach((el) => {
         const r = el.getBoundingClientRect();
@@ -110,7 +113,7 @@ test('whole chamber and every Echo track fit tall, short, narrow and zoom-sized 
   }
   // Every objective/title must also fit the smallest supported viewport.
   await page.setViewportSize({ width: 320, height: 568 });
-  for (let index = 0; index < 11; index++) {
+  for (let index = 0; index < campaign.length; index++) {
     await page.evaluate((i) => {
       const d = (window as unknown as { echoDebug: Debug }).echoDebug;
       d.start(i);
@@ -170,4 +173,75 @@ test('mouse aim remains accurate after viewport and timeline-driven resizing', a
       // Browser pointer coordinates are quantized to CSS pixels on a scaled canvas.
       .toBeLessThan(0.015);
   }
+});
+
+test('large-world camera aiming, overview and reset work at desktop and compact sizes', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto('/?debug');
+  await page.getByRole('button', { name: 'Begin experiment' }).click();
+  for (const [width, height] of [
+    [1280, 720],
+    [800, 600],
+  ]) {
+    await page.setViewportSize({ width, height });
+    for (let index = 11; index < campaign.length; index++) {
+      await page.evaluate((i) => {
+        const d = (window as unknown as { echoDebug: Debug }).echoDebug;
+        d.start(i);
+        d.freeze();
+        d.step({ x: 1, y: 0, aim: 0, interact: false, shoot: false }, 230);
+        d.freeze(false);
+      }, index);
+      await page.waitForTimeout(150);
+      const player = await page.evaluate(() => {
+        const p = (window as unknown as { echoDebug: Debug }).echoDebug.session.world.player;
+        return { x: p.x, y: p.y };
+      });
+      const view = chamberView(campaign[index], player, false);
+      expect(view.x + view.y).toBeGreaterThan(0);
+      const canvas = (await page.locator('canvas').boundingBox())!;
+      await page.mouse.click(
+        canvas.x + ((player.x + 100 - view.x) / 960) * canvas.width,
+        canvas.y + ((player.y - 100 - view.y) / 560) * canvas.height,
+      );
+      await expect
+        .poll(() =>
+          page.evaluate(() => {
+            const aim = (
+              window as unknown as { echoDebug: Debug }
+            ).echoDebug.session.world.recording.events.find((e) => e.kind === 'shoot')?.aim;
+            return aim === undefined ? Infinity : Math.abs(aim + Math.PI / 4);
+          }),
+        )
+        .toBeLessThan(0.02);
+      await page.getByRole('button', { name: 'Open chamber map' }).click();
+      await assertFits(page);
+      await page.screenshot({ path: `.playtest/map-${campaign[index].id}-${width}.png` });
+      const tick = await page.evaluate(
+        () => (window as unknown as { echoDebug: Debug }).echoDebug.session.world.tick,
+      );
+      await page.waitForTimeout(100);
+      expect(
+        await page.evaluate(
+          () => (window as unknown as { echoDebug: Debug }).echoDebug.session.world.tick,
+        ),
+      ).toBe(tick);
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('r');
+      await page.waitForTimeout(100);
+      const reset = await page.evaluate(() => {
+        const w = (window as unknown as { echoDebug: Debug }).echoDebug.session.world;
+        return { x: w.player.x, y: w.player.y, events: w.recording.events.length };
+      });
+      expect(reset).toEqual({ ...campaign[index].spawn, events: 0 });
+      await expect(page.locator('#map-camera')).toHaveAttribute(
+        'x',
+        String(chamberView(campaign[index], campaign[index].spawn, false).x),
+      );
+    }
+  }
+  expect(errors).toEqual([]);
 });

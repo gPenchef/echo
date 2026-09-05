@@ -37,6 +37,9 @@ export type Portal = Vec & { id: string; to: Vec };
 export type Level = {
   id: string;
   name: string;
+  width: number;
+  height: number;
+  regions?: (Rect & { name: string })[];
   subtitle: string;
   objective: string;
   hint: string;

@@ -185,6 +185,37 @@ main {
   width: 100%;
   height: 100%;
 }
+#chamber-map {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 130px;
+  max-width: 28%;
+  padding: 5px;
+  background: #080e16ed;
+  border-color: #536a79;
+  box-shadow: 0 3px 14px #0008;
+}
+#chamber-map[hidden] {
+  display: none;
+}
+#chamber-map svg {
+  display: block;
+  width: 100%;
+  height: 75px;
+  max-height: 18cqh;
+}
+#chamber-map span {
+  display: block;
+  font:
+    9px Consolas,
+    monospace;
+  color: var(--gold);
+  margin-top: 3px;
+}
+#chamber-map.overview svg {
+  display: none;
+}
 canvas {
   display: block !important;
   width: 100% !important;

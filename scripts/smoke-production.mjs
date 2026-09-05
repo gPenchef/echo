@@ -62,9 +62,25 @@ try {
   await page.keyboard.press('Tab');
   await mkdir('.playtest', { recursive: true });
   await page.screenshot({ path: '.playtest/production.png', fullPage: true });
+  // The opt-in URL unlocks chamber selection, but must not expose dev instrumentation.
+  await page.goto('http://127.0.0.1:4173/?debug');
+  await page.getByRole('button', { name: 'Chambers', exact: true }).click();
+  for (const name of ['The Concourse', 'Dead Letter', 'Switchyard']) {
+    await page.locator('.level-button').filter({ hasText: name }).click();
+    await page.getByRole('button', { name: 'Open chamber map' }).click();
+    await page.getByRole('button', { name: 'Return to player view' }).waitFor();
+    await page.screenshot({
+      path: `.playtest/production-${name.toLowerCase().replaceAll(' ', '-')}.png`,
+    });
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Chambers', exact: true }).click();
+  }
+  if (await page.evaluate(() => 'echoDebug' in window))
+    throw new Error('Development instrumentation leaked into production debug URL');
   if (errors.length) throw new Error(errors.join('\n'));
   console.log(
-    'Production smoke passed: assets, canvas, controls, pause, planning, and no browser errors.',
+    'Production smoke passed: assets, controls, pause, all large maps, and no browser errors.',
   );
 } finally {
   await browser?.close();

@@ -1,6 +1,6 @@
 # ECHO — Temporal Chambers
 
-A playable browser puzzle game about cooperating with your past selves. Record a route, reset the chamber, and coordinate with the Echo that repeats it. Eleven chambers progress from your first pressure plate to a three-Echo energy-core extraction.
+A playable browser puzzle game about cooperating with your past selves. Record a route, reset the chamber, and coordinate with the Echo that repeats it. Fourteen chambers progress from your first pressure plate to large, multi-sector facilities with cargo transfers and scheduled gate openings.
 
 ![ECHO gameplay: cooperating with two Echoes in Interference](docs/gameplay.png)
 
@@ -18,7 +18,7 @@ Open the local URL printed by Vite (normally `http://127.0.0.1:5173`). Desktop k
 Gameplay fits the browser viewport without page scrolling. The chamber keeps its aspect ratio, controls compact on smaller windows, and the timeline moves beside the chamber in short landscape windows. All twelve Echo tracks remain visible. Long menus can scroll inside their paused dialog.
 
 ```sh
-npm test             # simulation regressions and all eleven campaign solutions
+npm test             # simulation regressions and all fourteen campaign solutions
 npm run typecheck
 npm run lint
 npm run build        # production files in dist/
@@ -39,17 +39,28 @@ The browser suite uses an installed Google Chrome via Playwright; it does not at
 | Space              | Commit this attempt as an Echo and reset                         |
 | R                  | Discard the current attempt and retry; preserve Echoes           |
 | Q                  | Remove the latest Echo and reset                                 |
-| Tab                | Pause and inspect historical paths and circuit connections       |
+| Tab                | Pause and inspect the full map, historical paths, and circuits   |
 | Escape             | Pause menu, settings, controls, restart chamber, level selection |
 
 An early commit means **repeat the recorded route, then hold the final position**. The Echo remains physical and vulnerable while holding. Letting the timer expire also commits the attempt. A player death freezes the failed attempt with its cause visible; press R to retry without recording the death. Optional chamber hints are available in the sidebar and pause menu.
 
 ## What's playable
 
-- Eleven progressive chambers, including timed switches, remote shooting targets, cargo, lasers, shielded sentries, synchronization plates, and a multi-Echo finale. Interference teaches how moving a crate can change an Echo's fate.
+- Fourteen progressive chambers, including timed switches, remote shooting targets, cargo, lasers, shielded sentries, synchronization plates, and larger facilities. Interference teaches how moving a crate can change an Echo's fate.
+- Variable world sizes, a clamped following camera, a live minimap showing Echoes/cargo/gates, and a paused full-facility overview. Original chambers retain their original scale and coordinates.
 - Up to twelve Echoes, undo, full restart, planning paths, event markers, stable/desynced/conflicted/lost status, and contextual interaction prompts.
 - Local progression and best scores, master volume, ambient sound, reduced motion, Echo trails, and higher contrast.
 - Procedural visuals and Web Audio effects. Sound is optional; mechanics also communicate through shapes, labels, and state changes.
+
+## Beyond the original chambers
+
+Three larger facilities unlock after Cascade; existing saved progress is preserved:
+
+- **The Concourse (1600 × 960):** split your history between distant north and south relays, open the archive, and carry its core around the eastern partition.
+- **Dead Letter (1200 × 1600):** a tall dispatch facility split by sealed bulkheads. Record a courier that transports cargo through paired transfer pads, drops its delivery, and then powers the rooftop gate.
+- **Switchyard (1920 × 960):** one Echo operates two distant 2.5-second gates at different times. Record a dispatch schedule, then deliver freight through both appointments.
+
+In large chambers, the camera follows you without zooming out during movement. Click the minimap or press Tab to inspect the entire facility with time paused. Gold is you/cargo, cyan is Echoes and relays, white marks extraction; the outlined rectangle is the current camera view. Transfer links are shown on both maps.
 
 ## How timelines work
 
@@ -67,11 +78,14 @@ Every reset constructs a fresh `World` from the level definition. Only committed
 - `src/levels/campaign.ts`: level definitions and validation.
 - `src/render.ts`: Phaser procedural rendering and bounded effects.
 - `src/main.ts`: input, scene update, menus, HUD, and progression.
+- `src/view.ts`: presentation-only camera bounds, overview fit, and pointer-to-world conversion.
 - `src/audio.ts`, `src/persistence.ts`: local audio and validated saves.
 - `tests/`: replay, reset, hazard, timing, persistence, and real-input campaign solution tests.
 - `e2e/`: actual browser controls, menus, rendering, and campaign integration.
 
-To add a chamber, use `Level` in `src/core/types.ts` and the `point`/`wall` helpers. The chamber is 960 × 560 logical pixels on a 40-pixel grid. Plates and switches publish named signals; doors, lasers, shields, and extraction reference those IDs. Door signal arrays use AND logic. Timed switches retrigger their timer; switches without a duration latch on until reset. Lasers emit downward or rightward and can optionally pulse. Paired teleporters are supported and tested, though the main campaign focuses on the core mechanics.
+To add a chamber, use `Level` in `src/core/types.ts` and the `point`/`wall` helpers. Each level declares `width` and `height` in logical pixels on a 40-pixel grid; the level factory defaults to 960 × 560. Dimensions must be tile-aligned and between 320 and 3840 per axis. `perimeter(columns, rows)` constructs a correctly sized border. Optional `regions` add named floor sectors. Collision, validation, drawing, minimap, and camera bounds all use the level dimensions. The canvas remains a 960 × 560 logical viewing window, so larger worlds do not enlarge the page or shrink movement to unreadable dots.
+
+Plates and switches publish named signals; doors, lasers, shields, and extraction reference those IDs. Door signal arrays use AND logic. Timed switches retrigger their timer; switches without a duration latch on until reset. Lasers emit downward or rightward and can optionally pulse. Paired teleporters transfer both actors and held cargo, and replay remains in world coordinates independently of the camera.
 
 Add a real-input solution to `tests/campaign.test.ts` and run it before considering a level ready. Those solutions use movement and actions, never teleport actors or force a door open. Check the room in the browser as well: `?debug` unlocks chamber selection and exposes development instrumentation. Instrumentation is omitted from production builds.
 

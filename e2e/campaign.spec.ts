@@ -84,7 +84,7 @@ async function commit(page: Page) {
   expect((await snapshot(page)).echoes).toBe(before.echoes + 1);
 }
 
-test('final chamber choreography succeeds through browser input and records campaign completion', async ({
+test('Cascade choreography succeeds through browser input and records chamber completion', async ({
   page,
 }) => {
   test.setTimeout(120000);
@@ -92,7 +92,7 @@ test('final chamber choreography succeeds through browser input and records camp
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/?debug');
   await page.getByRole('button', { name: 'Chambers', exact: true }).click();
-  await page.locator('.level-button').last().click();
+  await page.locator('.level-button').filter({ hasText: 'Cascade' }).click();
   await walk(page, 220, 140);
   await commit(page);
   await until(page, 125);
@@ -112,7 +112,7 @@ test('final chamber choreography succeeds through browser input and records camp
   await page.screenshot({ path: '.playtest/cascade-plan.png', fullPage: true });
   await page.keyboard.press('Tab');
   await walk(page, 860, 300);
-  await expect(page.getByText('You were never alone.')).toBeVisible();
+  await expect(page.getByText('Chamber reconstructed.')).toBeVisible();
   const result = await snapshot(page);
   expect(result.echoes).toBe(3);
   expect(result.actors.every((a) => a.alive && !a.desync && !a.conflict)).toBe(true);
@@ -192,4 +192,119 @@ test('Resonance: a quick mouse click is recorded and an Echo opens the remote ti
   await walk(page, 860, 300);
   await expect(page.getByText('Chamber reconstructed.')).toBeVisible();
   expect((await snapshot(page)).echoes).toBe(1);
+});
+
+test('The Concourse: distant branches cooperate across a scrolling facility', async ({ page }) => {
+  test.setTimeout(100000);
+  await page.goto('/?debug');
+  await page.getByRole('button', { name: 'Chambers', exact: true }).click();
+  await page.locator('.level-button').filter({ hasText: 'The Concourse' }).click();
+  await walk(page, 780, 100);
+  await walk(page, 140, 100);
+  await walk(page, 140, 140);
+  await commit(page);
+  await walk(page, 780, 860);
+  await walk(page, 140, 860);
+  await walk(page, 140, 820);
+  await commit(page);
+  await until(page, 460);
+  await page.getByRole('button', { name: 'Open chamber map' }).click();
+  const tick = (await snapshot(page)).tick;
+  await page.waitForTimeout(150);
+  expect((await snapshot(page)).tick).toBe(tick);
+  await page.screenshot({ path: '.playtest/concourse-overview.png' });
+  await page.getByRole('button', { name: 'Return to player view' }).click();
+  await walk(page, 1380, 460);
+  await walk(page, 1380, 180);
+  await page.keyboard.press('e');
+  await page.waitForTimeout(50);
+  await page.screenshot({ path: '.playtest/concourse-archive.png' });
+  await walk(page, 1460, 180);
+  await walk(page, 1460, 820);
+  await expect(page.getByText('Chamber reconstructed.')).toBeVisible();
+  expect((await snapshot(page)).actors.every((a) => a.alive && !a.desync && !a.conflict)).toBe(
+    true,
+  );
+});
+
+test('Dead Letter: a cargo Echo transfers through a bulkhead and hands off its delivery', async ({
+  page,
+}) => {
+  test.setTimeout(100000);
+  const transfer = async (key: string) => {
+    await page.keyboard.down(key);
+    await expect
+      .poll(async () => (await snapshot(page)).x, { intervals: [16] })
+      .toBeGreaterThan(800);
+    await page.keyboard.up(key);
+  };
+  await page.goto('/?debug');
+  await page.getByRole('button', { name: 'Chambers', exact: true }).click();
+  await page.locator('.level-button').filter({ hasText: 'Dead Letter' }).click();
+  await walk(page, 140, 1380);
+  await commit(page);
+  await until(page, 65);
+  await walk(page, 260, 1420);
+  await walk(page, 260, 1100);
+  await walk(page, 420, 1100);
+  await walk(page, 420, 1020);
+  await page.keyboard.press('e');
+  await page.waitForTimeout(50);
+  await walk(page, 350, 1020);
+  await transfer('a');
+  // Move off the receiving pad before its reentry cooldown expires.
+  await walk(page, 940, 660);
+  await page.keyboard.press('e');
+  await page.waitForTimeout(50);
+  await walk(page, 1020, 780);
+  await commit(page);
+  await until(page, 500);
+  await page.keyboard.press('Tab');
+  await page.screenshot({ path: '.playtest/dead-letter-overview.png' });
+  await page.keyboard.press('Tab');
+  await walk(page, 260, 1420);
+  await walk(page, 260, 1020);
+  await transfer('d');
+  await walk(page, 940, 660);
+  await page.keyboard.press('e');
+  await page.waitForTimeout(50);
+  await walk(page, 940, 140);
+  await walk(page, 1020, 140);
+  await expect(page.getByText('Chamber reconstructed.')).toBeVisible();
+  expect((await snapshot(page)).actors.every((a) => a.alive && !a.desync && !a.conflict)).toBe(
+    true,
+  );
+});
+
+test('Switchyard: one moving dispatcher opens both gates at the recorded appointments', async ({
+  page,
+}) => {
+  test.setTimeout(100000);
+  await page.goto('/?debug');
+  await page.getByRole('button', { name: 'Chambers', exact: true }).click();
+  await page.locator('.level-button').filter({ hasText: 'Switchyard' }).click();
+  await walk(page, 220, 180);
+  await until(page, 480);
+  await page.keyboard.press('e');
+  await walk(page, 220, 740);
+  await until(page, 960);
+  await page.keyboard.press('e');
+  await page.waitForTimeout(50);
+  await commit(page);
+  await page.keyboard.press('e');
+  await page.waitForTimeout(50);
+  await walk(page, 740, 420);
+  await until(page, 490);
+  await walk(page, 1380, 420);
+  await walk(page, 1380, 760);
+  await page.keyboard.press('Tab');
+  await page.screenshot({ path: '.playtest/switchyard-overview.png' });
+  await page.keyboard.press('Tab');
+  await until(page, 975);
+  await walk(page, 1780, 780);
+  await expect(page.getByText('You were never alone.')).toBeVisible();
+  expect((await snapshot(page)).echoes).toBe(1);
+  expect((await snapshot(page)).actors.every((a) => a.alive && !a.desync && !a.conflict)).toBe(
+    true,
+  );
 });

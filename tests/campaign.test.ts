@@ -123,6 +123,64 @@ export const solutions: ((s: Session) => void)[] = [
     at(s, 460);
     go(s, 860, 300);
   },
+  (s) => {
+    go(s, 780, 100);
+    go(s, 140, 100);
+    go(s, 140, 140);
+    commit(s);
+    go(s, 780, 860);
+    go(s, 140, 860);
+    go(s, 140, 820);
+    commit(s);
+    at(s, 430);
+    go(s, 1380, 460);
+    go(s, 1380, 180);
+    ticks(s, 1, { interact: true });
+    go(s, 1460, 180);
+    go(s, 1460, 820);
+  },
+  (s) => {
+    go(s, 140, 1380);
+    commit(s);
+    at(s, 60);
+    go(s, 260, 1420);
+    go(s, 260, 1100);
+    go(s, 420, 1100);
+    go(s, 420, 1020);
+    ticks(s, 1, { interact: true });
+    go(s, 350, 1020);
+    for (let i = 0; i < 30 && s.world.player.x < 800; i++) ticks(s, 1, { x: -1 });
+    expect(s.world.player.x).toBe(940);
+    go(s, 940, 660);
+    ticks(s, 1, { interact: true });
+    go(s, 1020, 780);
+    commit(s);
+    at(s, 450);
+    go(s, 260, 1420);
+    go(s, 260, 1020);
+    for (let i = 0; i < 30 && s.world.player.x < 800; i++) ticks(s, 1, { x: 1 });
+    expect(s.world.player.x).toBe(940);
+    ticks(s, 1, { interact: true });
+    expect(s.world.objects[0].holder).toBe(0);
+    go(s, 940, 140);
+    go(s, 1020, 140);
+  },
+  (s) => {
+    go(s, 220, 180);
+    at(s, 480);
+    ticks(s, 1, { interact: true });
+    go(s, 220, 740);
+    at(s, 960);
+    ticks(s, 1, { interact: true });
+    commit(s);
+    ticks(s, 1, { interact: true });
+    go(s, 740, 420);
+    at(s, 480);
+    go(s, 1380, 420);
+    go(s, 1380, 760);
+    at(s, 960);
+    go(s, 1780, 780);
+  },
 ];
 describe('campaign solvability', () => {
   it('Interference makes removing an Echo’s laser cover a real causal failure', () => {

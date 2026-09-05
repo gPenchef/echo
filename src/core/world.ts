@@ -87,9 +87,15 @@ export class World {
     const length = Math.max(1, Math.hypot(input.x, input.y));
     const speed = SPEED / HZ;
     const solids = this.solids(actor);
-    const nextX = actor.x + (input.x / length) * speed;
+    const nextX = Math.max(
+      RADIUS,
+      Math.min(this.level.width - RADIUS, actor.x + (input.x / length) * speed),
+    );
     if (!solids.some((r) => touches({ x: nextX, y: actor.y }, r, RADIUS))) actor.x = nextX;
-    const nextY = actor.y + (input.y / length) * speed;
+    const nextY = Math.max(
+      RADIUS,
+      Math.min(this.level.height - RADIUS, actor.y + (input.y / length) * speed),
+    );
     if (!solids.some((r) => touches({ x: actor.x, y: nextY }, r, RADIUS))) actor.y = nextY;
   }
   updateSignals() {

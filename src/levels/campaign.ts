@@ -7,7 +7,13 @@ export const wall = (x: number, y: number, w: number, h: number): Rect => ({
   w: w * 40,
   h: h * 40,
 });
-const border = [wall(0, 0, 24, 1), wall(0, 13, 24, 1), wall(0, 1, 1, 12), wall(23, 1, 1, 12)];
+export const perimeter = (columns: number, rows: number) => [
+  wall(0, 0, columns, 1),
+  wall(0, rows - 1, columns, 1),
+  wall(0, 1, 1, rows - 2),
+  wall(columns - 1, 1, 1, rows - 2),
+];
+const border = perimeter(24, 14);
 const split = (x: number, gap = 7) => [wall(x, 1, 1, gap - 1), wall(x, gap + 2, 1, 13 - gap - 2)];
 const door = (id: string, x: number, signals: string[], gap = 7) => ({
   id,
@@ -18,6 +24,8 @@ function level(id: string, name: string, data: Partial<Level>): Level {
   return {
     id,
     name,
+    width: 960,
+    height: 560,
     subtitle: '',
     objective: 'Reach the extraction pad.',
     hint: '',
@@ -25,7 +33,7 @@ function level(id: string, name: string, data: Partial<Level>): Level {
     par: 0,
     spawn: point(3, 7),
     exit: point(21, 7),
-    walls: [...border],
+    walls: perimeter((data.width ?? 960) / 40, (data.height ?? 560) / 40),
     plates: [],
     doors: [],
     switches: [],
@@ -165,9 +173,128 @@ export const campaign: Level[] = [
     objects: [{ id: 'core', ...point(3, 10), kind: 'core' }],
     turrets: [{ id: 'T', ...point(21, 3), range: 180, shield: 'C' }],
   }),
+  level('concourse', 'The Concourse', {
+    width: 1600,
+    height: 960,
+    seconds: 45,
+    par: 2,
+    core: true,
+    subtitle: 'DISTANCE IS ANOTHER KIND OF LOCK',
+    objective: 'Hold NORTH and SOUTH together. Retrieve the archive core beyond the east gate.',
+    hint: 'Tab reveals the full facility. From the central concourse, take the north branch and record NORTH. Record SOUTH in a separate loop. Both relays open the east archive. Collect its core, then take the eastern aisle around the lower partition to extraction.',
+    spawn: point(19, 11),
+    exit: point(36, 20),
+    regions: [
+      { ...wall(1, 1, 17, 8), name: 'NORTH RELAY' },
+      { ...wall(1, 15, 17, 8), name: 'SOUTH RELAY' },
+      { ...wall(18, 1, 7, 22), name: 'CONCOURSE' },
+      { ...wall(26, 1, 13, 12), name: 'ARCHIVE' },
+    ],
+    walls: [
+      ...perimeter(40, 24),
+      wall(1, 9, 16, 1),
+      wall(1, 14, 16, 1),
+      wall(25, 1, 1, 10),
+      wall(25, 13, 1, 10),
+      wall(26, 14, 9, 1),
+      wall(9, 3, 1, 4),
+      wall(9, 17, 1, 4),
+    ],
+    plates: [
+      { id: 'NORTH', ...point(3, 3) },
+      { id: 'SOUTH', ...point(3, 20) },
+    ],
+    doors: [{ id: 'N+S', ...wall(25, 11, 1, 2), signals: ['NORTH', 'SOUTH'] }],
+    objects: [{ id: 'archive', ...point(34, 4), kind: 'core' }],
+  }),
+  level('dead-letter', 'Dead Letter', {
+    width: 1200,
+    height: 1600,
+    seconds: 55,
+    par: 2,
+    core: true,
+    subtitle: 'YOUR PAST WILL DELIVER IT',
+    objective:
+      'Open DISPATCH. Send a cargo Echo through the transfer. Take its delivery to the roof.',
+    hint: 'Record DISPATCH in the basement. In loop two, cross its gate at the left, collect the core in the loading bay, and step onto transfer 1. At the destination, step north off transfer 2, drop the core, then record yourself on ROOF. On loop three, follow the same transfer after the courier has left, collect its delivery and cross the ROOF gate. Transfer pads carry objects and Echoes.',
+    spawn: point(4, 35),
+    exit: point(25, 3),
+    regions: [
+      { ...wall(1, 29, 28, 10), name: 'BASEMENT / DISPATCH' },
+      { ...wall(1, 21, 13, 7), name: 'LOADING BAY' },
+      { ...wall(17, 15, 12, 9), name: 'RECEIVING / TRANSFER 2' },
+      { ...wall(1, 1, 28, 13), name: 'ROOFTOP ARCHIVE' },
+    ],
+    walls: [
+      ...perimeter(30, 40),
+      wall(1, 28, 4, 1),
+      wall(8, 28, 21, 1),
+      wall(1, 14, 21, 1),
+      wall(25, 14, 4, 1),
+      // The transfer crosses a sealed bulkhead; it is not a cosmetic shortcut.
+      wall(14, 15, 1, 13),
+      wall(1, 7, 21, 1),
+    ],
+    plates: [
+      { id: 'DISPATCH', ...point(3, 34) },
+      { id: 'ROOF', ...point(25, 19) },
+    ],
+    doors: [
+      { id: 'DISPATCH', ...wall(5, 28, 3, 1), signals: ['DISPATCH'] },
+      { id: 'ROOF', ...wall(22, 14, 3, 1), signals: ['ROOF'] },
+    ],
+    portals: [
+      { id: '1', ...point(7, 25), to: point(23, 17) },
+      { id: '2', ...point(23, 17), to: point(7, 25) },
+    ],
+    objects: [{ id: 'letter', ...point(10, 25), kind: 'core' }],
+  }),
+  level('switchyard', 'Switchyard', {
+    width: 1920,
+    height: 960,
+    seconds: 45,
+    par: 1,
+    core: true,
+    subtitle: 'ONE ECHO. TWO APPOINTMENTS.',
+    objective: 'Schedule two 2.5-second gates with one Echo. Drive the core through both on time.',
+    hint: 'The dispatcher must move, not just hold a plate. Reach signal A, wait until 8 seconds have elapsed (37 remain), activate it, then move to B. Activate B at 16 seconds elapsed (29 remain) and commit. In the delivery loop, collect the core, wait at A’s gate, then follow the upper lane east and turn south at its far end to reach B’s gate. Your Echo opens both on schedule.',
+    spawn: point(3, 10),
+    exit: point(44, 19),
+    regions: [
+      { ...wall(1, 1, 18, 8), name: 'DISPATCH A / 08s' },
+      { ...wall(1, 15, 18, 8), name: 'DISPATCH B / 16s' },
+      { ...wall(21, 1, 15, 13), name: 'UPPER FREIGHT LANE' },
+      { ...wall(37, 1, 10, 22), name: 'LAST DEPARTURE' },
+    ],
+    walls: [
+      ...perimeter(48, 24),
+      wall(20, 1, 1, 9),
+      wall(20, 12, 1, 11),
+      wall(36, 1, 1, 17),
+      wall(36, 20, 1, 3),
+      wall(21, 14, 12, 1),
+      wall(10, 3, 1, 5),
+      wall(10, 15, 1, 5),
+    ],
+    switches: [
+      { id: 'A', ...point(5, 4), seconds: 2.5 },
+      { id: 'B', ...point(5, 18), seconds: 2.5 },
+    ],
+    doors: [
+      { id: 'A', ...wall(20, 10, 1, 2), signals: ['A'] },
+      { id: 'B', ...wall(36, 18, 1, 2), signals: ['B'] },
+    ],
+    objects: [{ id: 'freight', ...point(4, 10), kind: 'core' }],
+  }),
 ];
 
 export function validateLevel(l: Level) {
+  if (
+    ![l.width, l.height].every(
+      (size) => Number.isInteger(size) && size >= 320 && size <= 3840 && size % 40 === 0,
+    )
+  )
+    throw new Error(`${l.id}: dimensions must be tile-aligned, between 320 and 3840`);
   for (const [kind, list] of Object.entries({
     doors: l.doors,
     lasers: l.lasers,
@@ -202,9 +329,9 @@ export function validateLevel(l: Level) {
       !Number.isFinite(p.x) ||
       !Number.isFinite(p.y) ||
       p.x < 40 ||
-      p.x > 920 ||
+      p.x > l.width - 40 ||
       p.y < 40 ||
-      p.y > 520 ||
+      p.y > l.height - 40 ||
       l.walls.some((w) => p.x > w.x && p.x < w.x + w.w && p.y > w.y && p.y < w.y + w.h)
     )
       throw new Error(`${l.id}: entity inside wall or outside playable bounds`);
@@ -213,15 +340,15 @@ export function validateLevel(l: Level) {
     throw new Error(`${l.id}: invalid duration`);
   if (l.walls.concat(l.doors).some((r) => touches(l.spawn, r)))
     throw new Error(`${l.id}: spawn overlaps collision geometry`);
-  for (const r of [...l.walls, ...l.doors, ...l.lasers])
+  for (const r of [...l.walls, ...l.doors, ...l.lasers, ...(l.regions ?? [])])
     if (
       ![r.x, r.y, r.w, r.h].every(Number.isFinite) ||
       r.w <= 0 ||
       r.h <= 0 ||
       r.x < 0 ||
       r.y < 0 ||
-      r.x + r.w > 960 ||
-      r.y + r.h > 560
+      r.x + r.w > l.width ||
+      r.y + r.h > l.height
     )
       throw new Error(`${l.id}: invalid rectangle`);
   for (const p of l.plates)

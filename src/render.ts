@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { World } from './core/world';
 import type { Settings } from './persistence';
 import type { Feedback } from './core/types';
+import { chamberView, type ChamberView } from './view';
 
 const C = {
   floor: 0x101c28,
@@ -18,6 +19,7 @@ export class Renderer {
   labels: Phaser.GameObjects.Text[] = [];
   labelCount = 0;
   particles: (Feedback & { age: number })[] = [];
+  view: ChamberView = { x: 0, y: 0, w: 960, h: 560, zoom: 1 };
   constructor(public scene: Phaser.Scene) {
     this.g = scene.add.graphics();
   }
@@ -29,7 +31,13 @@ export class Renderer {
         .setOrigin(0.5);
       this.labels.push(label);
     }
-    label.setPosition(x, y).setText(text).setColor(color).setFontSize(size).setVisible(true);
+    // Phaser's setColor rebuilds its text texture even when the color is unchanged.
+    if (label.style.color !== color) label.setColor(color);
+    label
+      .setPosition(x, y)
+      .setText(text)
+      .setFontSize(Math.max(size, 9 / this.view.zoom))
+      .setVisible(true);
   }
   effects(feedback: Feedback[]) {
     this.particles.push(...feedback.map((f) => ({ ...f, age: 0 })));
@@ -39,15 +47,34 @@ export class Renderer {
     const g = this.g,
       l = world.level,
       time = world.tick / 60;
+    this.view = chamberView(l, world.player, planning);
+    this.scene.cameras.main
+      .setZoom(this.view.zoom)
+      .centerOn(this.view.x + this.view.w / 2, this.view.y + this.view.h / 2);
     g.clear();
     this.labelCount = 0;
-    g.fillStyle(0x090f18).fillRect(0, 0, 960, 560);
-    g.fillStyle(C.floor).fillRect(40, 40, 880, 480);
+    g.fillStyle(0x090f18).fillRect(0, 0, l.width, l.height);
+    g.fillStyle(C.floor).fillRect(40, 40, l.width - 80, l.height - 80);
+    for (const [i, region] of (l.regions ?? []).entries()) {
+      g.fillStyle(i % 2 ? 0x23404a : 0x353450, 0.18).fillRect(
+        region.x,
+        region.y,
+        region.w,
+        region.h,
+      );
+      this.label(
+        region.x + region.w / 2,
+        region.y + 25,
+        region.name,
+        '#638a9c',
+        planning ? 24 : 16,
+      );
+    }
     g.lineStyle(1, 0x213245, 0.45);
-    for (let x = 40; x <= 920; x += 40) g.lineBetween(x, 40, x, 520);
-    for (let y = 40; y <= 520; y += 40) g.lineBetween(40, y, 920, y);
-    for (let x = 60; x < 920; x += 80)
-      for (let y = 60; y < 520; y += 80) g.fillStyle(0x456278, 0.28).fillCircle(x, y, 1);
+    for (let x = 40; x <= l.width - 40; x += 40) g.lineBetween(x, 40, x, l.height - 40);
+    for (let y = 40; y <= l.height - 40; y += 40) g.lineBetween(40, y, l.width - 40, y);
+    for (let x = 60; x < l.width - 40; x += 80)
+      for (let y = 60; y < l.height - 40; y += 80) g.fillStyle(0x456278, 0.28).fillCircle(x, y, 1);
     // Physical circuit traces and matching labels make connections readable without color.
     for (const device of [...l.doors, ...l.lasers])
       for (const id of device.signals) {
@@ -203,8 +230,14 @@ export class Renderer {
       );
     });
     for (const p of l.portals) {
+      if (planning) {
+        g.lineStyle(2, C.cyan, 0.35).lineBetween(p.x, p.y, p.to.x, p.to.y);
+      }
+      g.fillStyle(C.cyan, 0.08).fillCircle(p.x, p.y, 26);
       g.lineStyle(3, C.cyan).strokeCircle(p.x, p.y, 21);
-      this.label(p.x, p.y, p.id);
+      g.lineStyle(1, C.cyan, 0.5).strokeCircle(p.x, p.y, 27);
+      this.label(p.x, p.y - 39, `TRANSFER ${p.id}`, '#9ed0d6', 11);
+      this.label(p.x, p.y, '↗', '#9ed0d6', 20);
     }
     l.turrets.forEach((t, i) => {
       const s = world.turretState[i];
@@ -333,7 +366,7 @@ export class Renderer {
     }
     this.particles = this.particles.filter((p) => p.age < 420);
     const prompt = world.interaction(world.player);
-    if (prompt && world.player.alive)
+    if (prompt && world.player.alive && !planning)
       this.label(
         world.player.x,
         world.player.y + 39,

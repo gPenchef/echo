@@ -8,6 +8,7 @@ import { loadSave, writeSave } from './persistence';
 import { Audio } from './audio';
 import { FixedClock } from './core/clock';
 import type { World } from './core/world';
+import { chamberView, pointerToWorld, VIEW_WIDTH, VIEW_HEIGHT } from './view';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const save = loadSave();
@@ -38,6 +39,25 @@ app.innerHTML = `<header><div class="brand">ECHO<small>TEMPORAL CHAMBERS</small>
 <div class="game-layout"><main><div id="stage"><div id="viewport"><div id="game" aria-label="ECHO game chamber. Move with WASD or arrow keys."></div><div id="rewind"></div></div></div><div id="notice" role="status" aria-live="polite"></div><div class="timeline"><div class="timeline-head"><span>RECORDED TIMELINES</span><span id="timeline-scale"></span></div><div id="tracks"></div></div></main>
 <aside><h2>CHAMBER OBJECTIVE</h2><p class="objective" id="objective"></p><button class="primary" id="commit">Space · Create Echo</button><button id="plan">Tab · Inspect plan</button><div class="rule"><h2>OPERATOR CONTROLS</h2><div class="controls"><kbd>W A S D</kbd><span>Move / arrow keys</span><kbd>MOUSE</kbd><span>Aim · click to fire</span><kbd>E</kbd><span>Interact / carry</span><kbd>SPACE</kbd><span>Commit & hold end</span><kbd>R</kbd><span>Retry · keep Echoes</span><kbd>Q</kbd><span>Undo latest Echo</span><kbd>ESC</kbd><span>Pause / settings</span></div></div><div class="rule"><button id="hint">Chamber hint</button><button id="pause">Pause</button></div></aside></div>
 <footer><span>COOPERATE WITH YOUR PAST SELVES.</span><span id="footer-state">60 Hz · LOCAL SIMULATION</span></footer><div id="overlay" role="dialog" aria-modal="true" aria-label="Game menu"></div>`;
+const mapButton = document.createElement('button');
+mapButton.id = 'chamber-map';
+mapButton.setAttribute('aria-label', 'Open chamber map');
+mapButton.title = 'Tab · Pause and inspect the full facility';
+$('viewport').append(mapButton);
+
+function refreshMap() {
+  const l = session.world.level;
+  mapButton.hidden = l.width <= VIEW_WIDTH && l.height <= VIEW_HEIGHT;
+  mapButton.innerHTML = `<svg viewBox="0 0 ${l.width} ${l.height}" aria-hidden="true">
+    <rect width="${l.width}" height="${l.height}" fill="#101c28"/>
+    ${l.walls.map((r) => `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="#536a79"/>`).join('')}
+    ${l.portals.map((p) => `<line x1="${p.x}" y1="${p.y}" x2="${p.to.x}" y2="${p.to.y}" stroke="#68dfed" stroke-width="4" stroke-dasharray="10 12"/>`).join('')}
+    ${l.plates.map((p) => `<rect x="${p.x - 14}" y="${p.y - 14}" width="28" height="28" fill="#68dfed"/>`).join('')}
+    ${l.switches.map((p) => `<circle cx="${p.x}" cy="${p.y}" r="14" fill="#68dfed"/>`).join('')}
+    <circle cx="${l.exit.x}" cy="${l.exit.y}" r="24" fill="none" stroke="#f1f5e9" stroke-width="10"/>
+    <g id="map-state"></g><g id="map-actors"></g><rect id="map-camera" fill="#ffffff08" stroke="#ffd78b" stroke-width="6"/>
+    </svg><span>Tab · Full map</span>`;
+}
 
 function applySettings() {
   document.body.classList.toggle('contrast', save.settings.contrast);
@@ -116,6 +136,7 @@ function start(i: number) {
   );
 }
 function refreshLevel() {
+  refreshMap();
   $('subtitle').textContent = campaign[index].subtitle;
   $('level-title').innerHTML =
     `<span>${String(index + 1).padStart(2, '0')}</span>${campaign[index].name}`;
@@ -301,6 +322,39 @@ function updateHud() {
   $('loop-label').textContent =
     `LOOP ${String(session.runs.length + 1).padStart(2, '0')} · ${session.runs.length} ECHOES`;
   const all = [...session.runs, w.recording];
+  if (!mapButton.hidden) {
+    const view = chamberView(w.level, w.player, planning);
+    const camera = $('map-camera');
+    for (const [key, value] of Object.entries({
+      x: Math.max(0, view.x),
+      y: Math.max(0, view.y),
+      width: Math.min(w.level.width, view.w),
+      height: Math.min(w.level.height, view.h),
+    }))
+      camera.setAttribute(key, String(value));
+    $('map-state').innerHTML =
+      w.level.doors
+        .map(
+          (d) =>
+            `<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" fill="${w.doorOpen.get(d.id) ? '#68dfed' : '#ff657d'}"/>`,
+        )
+        .join('') +
+      w.objects
+        .map(
+          (o) =>
+            `<rect x="${o.x - 14}" y="${o.y - 14}" width="28" height="28" fill="${o.kind === 'core' ? '#ffd78b' : '#ffffff'}"/>`,
+        )
+        .join('');
+    $('map-actors').innerHTML = w.actors
+      .map(
+        (a) =>
+          `<circle cx="${a.x}" cy="${a.y}" r="${a.id ? 13 : 20}" fill="${!a.alive ? '#ff657d' : a.id ? '#68dfed' : '#ffd78b'}"/>`,
+      )
+      .join('');
+    mapButton.classList.toggle('overview', planning);
+    mapButton.querySelector('span')!.textContent = planning ? 'Tab · Return' : 'Tab · Full map';
+    mapButton.setAttribute('aria-label', planning ? 'Return to player view' : 'Open chamber map');
+  }
   if (timelineWorld !== w) {
     timelineWorld = w;
     $('tracks').style.setProperty('--track-columns', String(Math.ceil(all.length / 4)));
@@ -356,6 +410,7 @@ button('commit', () => {
 });
 button('pause', showPause);
 button('plan', togglePlan);
+mapButton.onclick = togglePlan;
 function showHint() {
   returnScreen = 'pause';
   overlay(
@@ -464,11 +519,13 @@ class ChamberScene extends Phaser.Scene {
       clock.clear();
     } else if (!paused && session.world.status === 'playing') {
       clock.advance(delta, () => {
-        if (pointerPosition)
+        if (pointerPosition) {
+          const target = pointerToWorld(pointerPosition, renderer.view);
           pointerAim = Math.atan2(
-            pointerPosition.y - session.world.player.y,
-            pointerPosition.x - session.world.player.x,
+            target.y - session.world.player.y,
+            target.x - session.world.player.x,
           );
+        }
         const input: Input = {
           x:
             Number(keys.has('KeyD') || keys.has('ArrowRight')) -
@@ -522,8 +579,8 @@ class ChamberScene extends Phaser.Scene {
 }
 const game = new Phaser.Game({
   type: Phaser.AUTO,
-  width: 960,
-  height: 560,
+  width: VIEW_WIDTH,
+  height: VIEW_HEIGHT,
   parent: 'game',
   backgroundColor: '#101c28',
   scene: ChamberScene,
