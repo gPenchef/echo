@@ -302,9 +302,113 @@ test('Switchyard: one moving dispatcher opens both gates at the recorded appoint
   await page.keyboard.press('Tab');
   await until(page, 975);
   await walk(page, 1780, 780);
-  await expect(page.getByText('You were never alone.')).toBeVisible();
+  await expect(page.getByText('Chamber reconstructed.')).toBeVisible();
   expect((await snapshot(page)).echoes).toBe(1);
   expect((await snapshot(page)).actors.every((a) => a.alive && !a.desync && !a.conflict)).toBe(
+    true,
+  );
+});
+
+test('Ballast: one Echo delivers both crates and holds the final relay', async ({ page }) => {
+  test.setTimeout(120000);
+  await page.goto('/?debug');
+  await page.getByRole('button', { name: 'Chambers', exact: true }).click();
+  await page.locator('.level-button').filter({ hasText: 'Ballast' }).click();
+  const interact = async () => {
+    await page.keyboard.press('e');
+    await page.waitForTimeout(50);
+  };
+  await interact();
+  await walk(page, 260, 180);
+  await interact();
+  await walk(page, 260, 460);
+  await walk(page, 660, 460);
+  await walk(page, 660, 620);
+  await interact();
+  await walk(page, 820, 780);
+  await interact();
+  await walk(page, 980, 780);
+  await walk(page, 980, 180);
+  await commit(page);
+  await until(page, 1000);
+  await page.keyboard.press('Tab');
+  await page.screenshot({ path: '.playtest/ballast-plan.png' });
+  await page.keyboard.press('Tab');
+  await walk(page, 860, 460);
+  await walk(page, 860, 820);
+  await walk(page, 1060, 820);
+  await interact();
+  await walk(page, 1060, 460);
+  await walk(page, 1340, 460);
+  await expect(page.getByText('Chamber reconstructed.')).toBeVisible();
+  expect((await snapshot(page)).echoes).toBe(1);
+  expect((await snapshot(page)).actors.every((a) => a.alive && !a.conflict && !a.desync)).toBe(
+    true,
+  );
+});
+
+test('Crossfire: two Echoes protect the crossings while the player destroys the sentry', async ({
+  page,
+}) => {
+  test.setTimeout(100000);
+  await page.goto('/?debug');
+  await page.getByRole('button', { name: 'Chambers', exact: true }).click();
+  await page.locator('.level-button').filter({ hasText: 'Crossfire' }).click();
+  await walk(page, 220, 180);
+  await commit(page);
+  await until(page, 160);
+  await walk(page, 940, 460);
+  await walk(page, 940, 780);
+  await commit(page);
+  await until(page, 680);
+  await walk(page, 1100, 460);
+  const box = (await page.locator('canvas').boundingBox())!;
+  // At the east camera clamp, the sentry's world x=1420 appears at view x=780.
+  await page.mouse.move(box.x + (780 / 960) * box.width, box.y + (280 / 560) * box.height);
+  await page.mouse.down();
+  await page.waitForTimeout(1200);
+  await page.mouse.up();
+  await page.keyboard.press('Tab');
+  await page.screenshot({ path: '.playtest/crossfire-plan.png' });
+  await page.keyboard.press('Tab');
+  await walk(page, 1500, 460);
+  await expect(page.getByText('Chamber reconstructed.')).toBeVisible();
+  expect((await snapshot(page)).actors.every((a) => a.alive && !a.conflict && !a.desync)).toBe(
+    true,
+  );
+});
+
+test('Homecoming: retrieves the remote core and reunites with the home Echo', async ({ page }) => {
+  test.setTimeout(120000);
+  await page.goto('/?debug');
+  await page.getByRole('button', { name: 'Chambers', exact: true }).click();
+  await page.locator('.level-button').filter({ hasText: 'Homecoming' }).click();
+  await expect(page.locator('#timer')).not.toContainText('00:60');
+  await walk(page, 940, 540);
+  await walk(page, 220, 540);
+  await walk(page, 220, 220);
+  await commit(page);
+  await walk(page, 940, 740);
+  await walk(page, 220, 740);
+  await walk(page, 220, 1020);
+  await commit(page);
+  await page.waitForTimeout(200);
+  await commit(page);
+  await until(page, 470);
+  await walk(page, 1820, 620);
+  await walk(page, 1820, 220);
+  await walk(page, 1700, 220);
+  await page.keyboard.press('e');
+  await page.waitForTimeout(50);
+  await page.keyboard.press('Tab');
+  await page.screenshot({ path: '.playtest/homecoming-plan.png' });
+  await page.keyboard.press('Tab');
+  await walk(page, 1820, 220);
+  await walk(page, 1820, 620);
+  await walk(page, 940, 620);
+  await expect(page.getByText('You were never alone.')).toBeVisible();
+  expect((await snapshot(page)).echoes).toBe(3);
+  expect((await snapshot(page)).actors.every((a) => a.alive && !a.conflict && !a.desync)).toBe(
     true,
   );
 });

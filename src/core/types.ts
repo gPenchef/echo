@@ -7,6 +7,8 @@ export type Vec = { x: number; y: number };
 export type Rect = Vec & { w: number; h: number };
 export type Input = { x: number; y: number; aim: number; shoot: boolean; interact: boolean };
 export const idle = (): Input => ({ x: 0, y: 0, aim: 0, shoot: false, interact: false });
+export type WorldRules = { god: boolean; noclip: boolean; power: boolean };
+export const normalRules = (): WorldRules => ({ god: false, noclip: false, power: false });
 export type Action = {
   tick: number;
   kind: 'shoot' | 'switch' | 'pickup' | 'drop' | 'death' | 'teleport';

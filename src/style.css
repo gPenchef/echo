@@ -216,6 +216,52 @@ main {
 #chamber-map.overview svg {
   display: none;
 }
+#test-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 5px 7px;
+  background: #271b10ec;
+  color: var(--gold);
+  font:
+    9px Consolas,
+    monospace;
+  pointer-events: none;
+}
+.cheat-entry {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.cheat-entry input {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid #536a79;
+  border-radius: 5px;
+  padding: 10px;
+  background: #080e16;
+  color: var(--gold);
+}
+.cheat-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.cheat-code {
+  text-align: left;
+  padding: 10px;
+}
+.cheat-code small {
+  display: block;
+  margin-top: 5px;
+  color: #b2c4d4;
+  font-size: 11px;
+  line-height: 1.4;
+}
+#cheat-result {
+  color: var(--gold);
+  min-height: 20px;
+}
 canvas {
   display: block !important;
   width: 100% !important;
@@ -551,7 +597,7 @@ body.reduced * {
   animation: none !important;
   transition: none !important;
 }
-@media (max-height: 800px) {
+@media (max-height: 900px) {
   #app {
     padding: 10px 18px;
     gap: 8px;
@@ -585,7 +631,7 @@ body.reduced * {
   }
   aside {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto auto auto auto;
     align-items: center;
     gap: 8px;
     padding: 0;
@@ -646,7 +692,7 @@ body.reduced * {
     font-size: 8px;
   }
   aside {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 6px;
   }
   .objective {

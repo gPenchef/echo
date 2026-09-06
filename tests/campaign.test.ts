@@ -181,6 +181,59 @@ export const solutions: ((s: Session) => void)[] = [
     at(s, 960);
     go(s, 1780, 780);
   },
+  (s) => {
+    ticks(s, 1, { interact: true });
+    go(s, 260, 180);
+    ticks(s, 1, { interact: true });
+    go(s, 260, 460);
+    go(s, 660, 460);
+    go(s, 660, 620);
+    ticks(s, 1, { interact: true });
+    go(s, 820, 780);
+    ticks(s, 1, { interact: true });
+    go(s, 980, 780);
+    go(s, 980, 180);
+    commit(s);
+    at(s, 950);
+    go(s, 860, 460);
+    go(s, 860, 820);
+    go(s, 1060, 820);
+    ticks(s, 1, { interact: true });
+    go(s, 1060, 460);
+    go(s, 1340, 460);
+  },
+  (s) => {
+    go(s, 220, 180);
+    commit(s);
+    at(s, 150);
+    go(s, 940, 460);
+    go(s, 940, 780);
+    commit(s);
+    at(s, 650);
+    go(s, 1100, 460);
+    ticks(s, 65, { shoot: true, aim: 0 });
+    go(s, 1500, 460);
+  },
+  (s) => {
+    go(s, 940, 540);
+    go(s, 220, 540);
+    go(s, 220, 220);
+    commit(s);
+    go(s, 940, 740);
+    go(s, 220, 740);
+    go(s, 220, 1020);
+    commit(s);
+    ticks(s, 6);
+    commit(s);
+    at(s, 450);
+    go(s, 1820, 620);
+    go(s, 1820, 220);
+    go(s, 1700, 220);
+    ticks(s, 1, { interact: true });
+    go(s, 1820, 220);
+    go(s, 1820, 620);
+    go(s, 940, 620);
+  },
 ];
 describe('campaign solvability', () => {
   it('Interference makes removing an Echo’s laser cover a real causal failure', () => {

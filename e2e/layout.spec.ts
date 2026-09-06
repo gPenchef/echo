@@ -26,6 +26,7 @@ async function assertFits(page: Page) {
       '#plan',
       '#hint',
       '#pause',
+      '#restart-level',
       '#timer',
       '#level-title',
       '#chamber-map:not([hidden])',
@@ -192,7 +193,7 @@ test('large-world camera aiming, overview and reset work at desktop and compact 
         const d = (window as unknown as { echoDebug: Debug }).echoDebug;
         d.start(i);
         d.freeze();
-        d.step({ x: 1, y: 0, aim: 0, interact: false, shoot: false }, 230);
+        d.step({ x: 1, y: 0, aim: 0, interact: false, shoot: false }, 150);
         d.freeze(false);
       }, index);
       await page.waitForTimeout(150);

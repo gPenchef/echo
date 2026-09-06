@@ -91,7 +91,8 @@ export class Renderer {
       }
     const spawn = l.spawn;
     g.lineStyle(1, C.muted, 0.5).strokeCircle(spawn.x, spawn.y, 24);
-    this.label(spawn.x, spawn.y + 34, 'ORIGIN', '#637c91', 9);
+    if (Math.hypot(spawn.x - l.exit.x, spawn.y - l.exit.y) > 60)
+      this.label(spawn.x, spawn.y + 34, 'ORIGIN', '#637c91', 9);
     const unlocked =
       world.signal(l.exitSignals ?? []) &&
       (!l.core ||
@@ -116,7 +117,8 @@ export class Renderer {
       .lineBetween(e.x - 8, e.y, e.x + 8, e.y)
       .lineBetween(e.x + 2, e.y - 6, e.x + 8, e.y)
       .lineBetween(e.x + 2, e.y + 6, e.x + 8, e.y);
-    this.label(e.x, e.y + 40, l.core ? 'CORE → EXIT' : 'EXTRACTION', '#c4d0cf', 10);
+    const exitLabelY = l.plates.some((p) => Math.hypot(p.x - e.x, p.y - e.y) < 35) ? 62 : 40;
+    this.label(e.x, e.y + exitLabelY, l.core ? 'CORE → EXIT' : 'EXTRACTION', '#c4d0cf', 10);
     for (const p of l.plates) {
       const active = world.signals.get(p.id),
         radius = p.need ? 30 : 22;

@@ -1,14 +1,15 @@
 import Phaser from 'phaser';
 import './style.css';
 import { Session } from './core/session';
-import { HZ, idle, type Input } from './core/types';
+import { HZ, idle, normalRules, type Input } from './core/types';
 import { campaign } from './levels/campaign';
 import { Renderer } from './render';
 import { loadSave, writeSave } from './persistence';
 import { Audio } from './audio';
-import { FixedClock } from './core/clock';
+import { FixedClock, formatCountdown } from './core/clock';
 import type { World } from './core/world';
 import { chamberView, pointerToWorld, VIEW_WIDTH, VIEW_HEIGHT } from './view';
+import { cheatCodes, parseCheat } from './cheats';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const save = loadSave();
@@ -20,7 +21,18 @@ let index = 0,
   transition = 0,
   gameReady = false;
 const clock = new FixedClock();
-let screen: 'menu' | 'levels' | 'pause' | 'settings' | 'help' | 'complete' | 'none' = 'menu';
+let screen:
+  | 'menu'
+  | 'levels'
+  | 'pause'
+  | 'settings'
+  | 'help'
+  | 'complete'
+  | 'none'
+  | 'cheats'
+  | 'restart' = 'menu';
+const testing = { rules: normalRules(), slow: false, unlocked: false };
+let dialogBack: () => void = () => showMenu();
 let returnScreen: 'menu' | 'pause' = 'menu';
 let noticeUntil = 0,
   lastWarning = -1,
@@ -44,6 +56,16 @@ mapButton.id = 'chamber-map';
 mapButton.setAttribute('aria-label', 'Open chamber map');
 mapButton.title = 'Tab · Pause and inspect the full facility';
 $('viewport').append(mapButton);
+const restartButton = document.createElement('button');
+restartButton.id = 'restart-level';
+restartButton.textContent = 'Restart level';
+restartButton.title = 'Shift + R · Clear all Echoes and restart this level';
+$('pause').before(restartButton);
+const testBadge = document.createElement('div');
+testBadge.id = 'test-badge';
+testBadge.textContent = 'TEST RUN · NOT SAVED';
+testBadge.hidden = true;
+$('viewport').append(testBadge);
 
 function refreshMap() {
   const l = session.world.level;
@@ -114,6 +136,7 @@ function button(id: string, action: () => void) {
 }
 function canPlay(i: number) {
   return (
+    testing.unlocked ||
     i === 0 ||
     !!save.completed[campaign[i - 1].id] ||
     !!save.completed[campaign[i].id] ||
@@ -122,7 +145,9 @@ function canPlay(i: number) {
 }
 function start(i: number) {
   index = i;
-  session = new Session(campaign[i]);
+  planning = false;
+  session = new Session(campaign[i], testing.rules);
+  session.assisted ||= testing.slow;
   transition = 0;
   lastWarning = -1;
   renderer?.clearEffects();
@@ -158,6 +183,7 @@ function showMenu() {
   button('select', showLevels);
   button('how', showHelp);
   button('settings', showSettings);
+  addCheatButton();
 }
 function showLevels() {
   screen = 'levels';
@@ -166,6 +192,7 @@ function showLevels() {
   );
   campaign.forEach((_, i) => button(`level-${i}`, () => start(i)));
   button('back', showMenu);
+  addCheatButton();
 }
 function showPause() {
   if (session.world.status === 'complete') {
@@ -186,14 +213,96 @@ function showPause() {
     hideOverlay();
     reset('undo');
   });
-  button('full-reset', () => {
-    hideOverlay();
-    reset('clear');
-  });
+  button('full-reset', showRestart);
   button('how', showHelp);
   button('settings', showSettings);
   button('select', showLevels);
   button('pause-hint', showHint);
+  addCheatButton();
+}
+function addCheatButton() {
+  const b = document.createElement('button');
+  b.textContent = 'Cheat codes';
+  b.onclick = () => showCheats();
+  $('overlay').querySelector('.actions')?.append(b);
+}
+function returnToScreen() {
+  const previous = screen,
+    wasPlanning = planning;
+  return () => {
+    if (previous === 'menu') showMenu();
+    else if (previous === 'levels') showLevels();
+    else if (previous === 'pause') showPause();
+    else if (previous === 'complete') showComplete();
+    else if (previous === 'settings') showSettings();
+    else if (previous === 'help') showHelp();
+    else {
+      hideOverlay();
+      if (wasPlanning) togglePlan();
+    }
+  };
+}
+function showRestart() {
+  dialogBack = returnToScreen();
+  screen = 'restart';
+  overlay(
+    '<div class="eyebrow">RECONSTRUCT FROM ZERO</div><h2>Restart this level?</h2><p>All Echoes, cargo changes, and current-level counters will be cleared. Saved campaign progress stays intact. Active cheat toggles stay enabled.</p><div class="actions"><button id="cancel" class="primary">Keep playing</button><button id="confirm-restart">Restart level now</button></div>',
+  );
+  button('cancel', dialogBack);
+  button('confirm-restart', () => start(index));
+}
+function showCheats(message = '') {
+  if (screen !== 'cheats') dialogBack = returnToScreen();
+  screen = 'cheats';
+  overlay(
+    `<div class="eyebrow">LOCAL TESTING TOOLS · F2</div><h2>Cheat codes</h2><p>Gameplay cheats mark the current run as a test: no completion or best score is saved. Toggles survive loop resets but are not saved across page reloads. NORMAL starts a clean run.</p><form id="cheat-form"><label for="cheat-input">Enter a code</label><div class="cheat-entry"><input id="cheat-input" autocomplete="off" spellcheck="false" maxlength="40" placeholder="WARP 15"><button class="primary" type="submit">Execute</button></div></form><p id="cheat-result" role="status"></p><div class="cheat-list">${cheatCodes.map(([code, help]) => `<button id="code-${code}" class="cheat-code"><strong>${code}${code === 'GOD' ? (testing.rules.god ? ' · ON' : ' · OFF') : code === 'NOCLIP' ? (testing.rules.noclip ? ' · ON' : ' · OFF') : code === 'POWER' ? (testing.rules.power ? ' · ON' : ' · OFF') : code === 'SLOW' ? (testing.slow ? ' · ON' : ' · OFF') : ''}</strong><small>${help}</small></button>`).join('')}</div><p><kbd>WARP 1–${campaign.length}</kbd> Jump directly to a chamber. No completion is awarded.</p><div class="actions"><button id="cheat-back">Back</button></div>`,
+  );
+  $('cheat-result').textContent = message;
+  $('cheat-form').onsubmit = (event) => {
+    event.preventDefault();
+    executeCheat($<HTMLInputElement>('cheat-input').value);
+  };
+  cheatCodes.forEach(([code]) => button(`code-${code}`, () => executeCheat(code)));
+  button('cheat-back', dialogBack);
+  $('cheat-input').focus();
+}
+function executeCheat(text: string) {
+  const command = parseCheat(text, campaign.length);
+  if (!command) {
+    $('cheat-result').textContent =
+      `Unknown code. Use the buttons below or WARP 1–${campaign.length}.`;
+    return;
+  }
+  if (command.kind === 'WARP' || command.kind === 'NEXT') {
+    testing.unlocked = true;
+    start(command.kind === 'WARP' ? command.index : (index + 1) % campaign.length);
+    return;
+  }
+  if (command.kind === 'NORMAL') {
+    Object.assign(testing.rules, normalRules());
+    testing.slow = false;
+    start(index);
+    return;
+  }
+  if (command.kind === 'UNLOCK') testing.unlocked = true;
+  else {
+    if (command.kind === 'SLOW') testing.slow = !testing.slow;
+    else {
+      const key = command.kind === 'GOD' ? 'god' : command.kind === 'NOCLIP' ? 'noclip' : 'power';
+      testing.rules[key] = !testing.rules[key];
+    }
+    session.rules = testing.rules;
+    session.world.rules = testing.rules;
+    session.assisted = true;
+    if (session.world.status === 'dead') session.retry();
+    session.world.updateSignals();
+  }
+  updateHud();
+  showCheats(
+    command.kind === 'UNLOCK'
+      ? 'All chambers unlocked for this visit. Saved completions unchanged.'
+      : `${command.kind} toggled. This run will not be saved.`,
+  );
 }
 function showHelp() {
   screen = 'help';
@@ -249,9 +358,10 @@ function complete() {
   const world = session.world,
     previous = save.completed[world.level.id];
   if (
-    !previous ||
-    session.runs.length < previous.echoes ||
-    (session.runs.length === previous.echoes && world.tick < previous.ticks)
+    !session.assisted &&
+    (!previous ||
+      session.runs.length < previous.echoes ||
+      (session.runs.length === previous.echoes && world.tick < previous.ticks))
   )
     save.completed[world.level.id] = { echoes: session.runs.length, ticks: world.tick };
   persist();
@@ -264,11 +374,13 @@ function showComplete() {
   overlay(
     `<div class="eyebrow">${last ? 'EXPERIMENT COMPLETE' : 'TEMPORAL COOPERATION VERIFIED'}</div><h2>${last ? 'You were never alone.' : 'Chamber reconstructed.'}</h2><p>${last ? 'Every past self brought you here. The chamber can finally let you go.' : `You solved ${campaign[index].name}. The plan held together.`}</p><div class="score"><div><strong>${session.runs.length}</strong><small>ECHOES · PAR ${campaign[index].par}</small></div><div><strong>${(session.world.tick / HZ).toFixed(1)}s</strong><small>FINAL TIMELINE</small></div><div><strong>${session.deaths}</strong><small>DEATHS</small></div></div><p>${session.world.actors.filter((a) => a.id && a.alive).length} Echoes survived · ${session.retries} retries · ${session.commits} timelines recorded</p><div class="actions"><button class="primary" id="next">${last ? 'Return to chambers' : 'Next chamber →'}</button><button id="replay">Replay chamber</button><button id="select">Chambers</button></div>`,
   );
+  if (session.assisted)
+    $('overlay').querySelector('.eyebrow')!.textContent = 'TEST RUN · COMPLETION NOT SAVED';
   button('next', () => (last ? showLevels() : start(index + 1)));
   button('replay', () => start(index));
   button('select', showLevels);
 }
-function reset(kind: 'commit' | 'retry' | 'undo' | 'clear' | 'timeout') {
+function reset(kind: 'commit' | 'retry' | 'undo' | 'timeout') {
   if (transition > 0) return;
   const committed = kind === 'commit' || kind === 'timeout';
   if (committed && !session.commit(kind === 'timeout')) {
@@ -281,7 +393,6 @@ function reset(kind: 'commit' | 'retry' | 'undo' | 'clear' | 'timeout') {
   }
   if (kind === 'retry') session.retry();
   if (kind === 'undo') session.undo();
-  if (kind === 'clear') session.clear();
   clearInput();
   renderer?.clearEffects();
   transition = 0.4;
@@ -295,9 +406,7 @@ function reset(kind: 'commit' | 'retry' | 'undo' | 'clear' | 'timeout') {
       ? `E${session.runs.length} recorded. It repeats your route, then holds its final position.`
       : kind === 'undo'
         ? 'Latest Echo removed. Remaining history preserved.'
-        : kind === 'clear'
-          ? 'Chamber reset. All timelines cleared.'
-          : 'Attempt discarded. Committed Echoes preserved.',
+        : 'Attempt discarded. Committed Echoes preserved.',
   );
   updateHud();
 }
@@ -315,9 +424,10 @@ function togglePlan() {
   );
 }
 function updateHud() {
+  testBadge.hidden = !session.assisted;
   const w = session.world,
     left = Math.max(0, (w.limit - w.tick) / HZ);
-  $('timer').textContent = `00:${left.toFixed(1).padStart(4, '0')}`;
+  $('timer').textContent = formatCountdown(left);
   $('timer').style.color = left <= 5 ? '#ff8799' : '';
   $('loop-label').textContent =
     `LOOP ${String(session.runs.length + 1).padStart(2, '0')} · ${session.runs.length} ECHOES`;
@@ -409,6 +519,7 @@ button('commit', () => {
   if (!paused) reset('commit');
 });
 button('pause', showPause);
+restartButton.onclick = showRestart;
 button('plan', togglePlan);
 mapButton.onclick = togglePlan;
 function showHint() {
@@ -422,6 +533,12 @@ function showHint() {
 button('hint', showHint);
 
 window.addEventListener('keydown', (e) => {
+  if (e.code === 'F2' && !e.repeat) {
+    e.preventDefault();
+    if (screen === 'cheats') dialogBack();
+    else if (screen !== 'restart') showCheats();
+    return;
+  }
   if (e.code === 'Tab' && screen !== 'none') {
     const focusable = Array.from(
       $('overlay').querySelectorAll<HTMLElement>('button:not(:disabled), input'),
@@ -443,9 +560,11 @@ window.addEventListener('keydown', (e) => {
   )
     e.preventDefault();
   if (e.repeat) return;
+  if (e.target instanceof HTMLInputElement && e.code !== 'Escape') return;
   audio.unlock();
   if (e.code === 'Escape') {
-    if (planning) togglePlan();
+    if (screen === 'cheats' || screen === 'restart') dialogBack();
+    else if (planning) togglePlan();
     else if (screen === 'none') showPause();
     else if (screen === 'pause') hideOverlay();
     else if (screen === 'settings' || screen === 'help') {
@@ -455,6 +574,11 @@ window.addEventListener('keydown', (e) => {
     return;
   }
   if (screen !== 'none') return;
+  if (e.code === 'KeyR' && e.shiftKey) {
+    e.preventDefault();
+    showRestart();
+    return;
+  }
   if (e.code === 'Tab') {
     togglePlan();
     return;
@@ -518,7 +642,7 @@ class ChamberScene extends Phaser.Scene {
       transition = Math.max(0, transition - dt);
       clock.clear();
     } else if (!paused && session.world.status === 'playing') {
-      clock.advance(delta, () => {
+      clock.advance(delta * (testing.slow ? 0.5 : 1), () => {
         if (pointerPosition) {
           const target = pointerToWorld(pointerPosition, renderer.view);
           pointerAim = Math.atan2(

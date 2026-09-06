@@ -1,6 +1,6 @@
 # ECHO — Temporal Chambers
 
-A playable browser puzzle game about cooperating with your past selves. Record a route, reset the chamber, and coordinate with the Echo that repeats it. Fourteen chambers progress from your first pressure plate to large, multi-sector facilities with cargo transfers and scheduled gate openings.
+A playable browser puzzle game about cooperating with your past selves. Record a route, reset the chamber, and coordinate with the Echo that repeats it. Seventeen chambers progress from your first pressure plate to large, multi-sector facilities with cargo transfers, scheduled gate openings, and a return-home finale.
 
 ![ECHO gameplay: cooperating with two Echoes in Interference](docs/gameplay.png)
 
@@ -18,7 +18,7 @@ Open the local URL printed by Vite (normally `http://127.0.0.1:5173`). Desktop k
 Gameplay fits the browser viewport without page scrolling. The chamber keeps its aspect ratio, controls compact on smaller windows, and the timeline moves beside the chamber in short landscape windows. All twelve Echo tracks remain visible. Long menus can scroll inside their paused dialog.
 
 ```sh
-npm test             # simulation regressions and all fourteen campaign solutions
+npm test             # simulation regressions and all seventeen campaign solutions
 npm run typecheck
 npm run lint
 npm run build        # production files in dist/
@@ -31,22 +31,24 @@ The browser suite uses an installed Google Chrome via Playwright; it does not at
 
 ## Controls
 
-| Key                | Action                                                           |
-| ------------------ | ---------------------------------------------------------------- |
-| WASD / arrows      | Move; diagonal speed is normalized                               |
-| Mouse / left click | Aim / fire                                                       |
-| E                  | Activate a switch, pick up, or drop an object                    |
-| Space              | Commit this attempt as an Echo and reset                         |
-| R                  | Discard the current attempt and retry; preserve Echoes           |
-| Q                  | Remove the latest Echo and reset                                 |
-| Tab                | Pause and inspect the full map, historical paths, and circuits   |
-| Escape             | Pause menu, settings, controls, restart chamber, level selection |
+| Key                | Action                                                            |
+| ------------------ | ----------------------------------------------------------------- |
+| WASD / arrows      | Move; diagonal speed is normalized                                |
+| Mouse / left click | Aim / fire                                                        |
+| E                  | Activate a switch, pick up, or drop an object                     |
+| Space              | Commit this attempt as an Echo and reset                          |
+| R                  | Discard the current attempt and retry; preserve Echoes            |
+| Shift + R          | Restart level (confirmation clears all Echoes and level counters) |
+| F2                 | Open the cheat-code/testing panel                                 |
+| Q                  | Remove the latest Echo and reset                                  |
+| Tab                | Pause and inspect the full map, historical paths, and circuits    |
+| Escape             | Pause menu, settings, controls, restart chamber, level selection  |
 
 An early commit means **repeat the recorded route, then hold the final position**. The Echo remains physical and vulnerable while holding. Letting the timer expire also commits the attempt. A player death freezes the failed attempt with its cause visible; press R to retry without recording the death. Optional chamber hints are available in the sidebar and pause menu.
 
 ## What's playable
 
-- Fourteen progressive chambers, including timed switches, remote shooting targets, cargo, lasers, shielded sentries, synchronization plates, and larger facilities. Interference teaches how moving a crate can change an Echo's fate.
+- Seventeen progressive chambers, including timed switches, remote shooting targets, cargo, lasers, shielded sentries, synchronization plates, and larger facilities. Interference teaches how moving a crate can change an Echo's fate.
 - Variable world sizes, a clamped following camera, a live minimap showing Echoes/cargo/gates, and a paused full-facility overview. Original chambers retain their original scale and coordinates.
 - Up to twelve Echoes, undo, full restart, planning paths, event markers, stable/desynced/conflicted/lost status, and contextual interaction prompts.
 - Local progression and best scores, master volume, ambient sound, reduced motion, Echo trails, and higher contrast.
@@ -61,6 +63,27 @@ Three larger facilities unlock after Cascade; existing saved progress is preserv
 - **Switchyard (1920 × 960):** one Echo operates two distant 2.5-second gates at different times. Record a dispatch schedule, then deliver freight through both appointments.
 
 In large chambers, the camera follows you without zooming out during movement. Click the minimap or press Tab to inspect the entire facility with time paused. Gold is you/cargo, cyan is Echoes and relays, white marks extraction; the outlined rectangle is the current camera view. Transfer links are shown on both maps.
+
+The campaign continues with **Ballast (1440 × 960)**, where one courier Echo delivers two crates before holding a third relay; **Crossfire (1600 × 960)**, a two-Echo laser crossing and shielded-sentry encounter; and **Homecoming (1920 × 1280)**, a remote core retrieval that finishes by reuniting with an Echo at the origin.
+
+## Restart and cheat codes
+
+The **Restart level** button is always available in the gameplay toolbar. It pauses for confirmation, then clears all Echoes, world changes, and current-level counters. Cancelling preserves the exact paused/planning state. Saved progress is never erased by a level restart. R still retries only the current loop.
+
+Press **F2**, or choose **Cheat codes** from a menu. Type a code and press Enter, or click its button. Codes work in normal production builds and are case-insensitive; no developer URL is needed.
+
+| Code      | Effect                                                                           |
+| --------- | -------------------------------------------------------------------------------- |
+| `UNLOCK`  | Unlock all chambers for this browser visit without awarding completions.         |
+| `WARP 17` | Jump to a numbered chamber (1–17).                                               |
+| `NEXT`    | Skip to the next chamber without completing the current one.                     |
+| `GOD`     | Toggle invulnerability for the player and all Echoes.                            |
+| `NOCLIP`  | Toggle passage through walls, doors, and crates; world edges still apply.        |
+| `POWER`   | Toggle all circuits on and all lasers off.                                       |
+| `SLOW`    | Toggle half-speed simulation for movement, replay, timers, and hazards together. |
+| `NORMAL`  | Disable gameplay cheats and restart the current level with clean history.        |
+
+Gameplay cheats mark a run **TEST RUN · NOT SAVED**, even if toggled off later. Such runs cannot award completions or overwrite best scores. Cheats survive loop retry/commit and level restart, but are not persisted across page reloads. NORMAL restores score-eligible play; the separate visit-only chamber unlock remains available. Unlocking or jumping alone does not invalidate a genuinely solved, unassisted run.
 
 ## How timelines work
 

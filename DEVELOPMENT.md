@@ -2,7 +2,7 @@
 
 ## Implemented
 
-The initial empty repository now contains the TypeScript/Vite/Phaser game, fourteen authored chambers, deterministic input replay, targeted actions, repeatable resets, physical Echo causality, carryable crates/cores, plates, timed and latched switches, doors, lasers, shooting targets, shielded turrets, campaign teleporters, menus, persistence, audio, and planning/timeline UX. The three larger facilities have independent dimensions, named sectors, a following camera, live minimap, and full-map planning.
+The initial empty repository now contains the TypeScript/Vite/Phaser game, seventeen authored chambers, deterministic input replay, targeted actions, repeatable resets, physical Echo causality, carryable crates/cores, plates, timed and latched switches, doors, lasers, shooting targets, shielded turrets, campaign teleporters, menus, persistence, audio, and planning/timeline UX. Six larger facilities have independent dimensions, named sectors, a following camera, live minimap, and full-map planning. An always-visible restart control and F2 cheat panel support testing without overwriting legitimate scores.
 
 The campaign has executable solutions at its displayed par Echo counts. Browser tests exercise real keyboard movement, the first Echo puzzle, final choreography, progression, settings, pause, planning, and automatic timeout. Unit regressions cover repeated reconstruction, event ordering, checkpoint accuracy, multiple frame rates, object conflicts, dead Echoes dropping cargo, closing doors, teleportation, laser cover, last-tick actions, and twelve armed Echoes.
 
@@ -17,6 +17,7 @@ The campaign has executable solutions at its displayed par Echo counts. Browser 
 - No remote analytics, asset requests, accounts, or cloud saves.
 - Camera coordinates are presentation-only. Replay and collision always use world coordinates. Pointer input is converted through the last rendered camera view, including after resize and teleportation.
 - Original chamber IDs and saved scores are unchanged. The larger facilities unlock after Cascade.
+- Cheat rules are explicit world/session options, retained across loop reconstruction. GOD/NOCLIP affect all actors consistently; SLOW scales the fixed-clock input rather than actor speeds. Gameplay-assisted sessions never award saved completions. NORMAL starts fresh to avoid treating an altered recording as legitimate history.
 
 ## Remaining design opportunities
 

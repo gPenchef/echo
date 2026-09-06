@@ -4,6 +4,8 @@ import {
   SPEED,
   RADIUS,
   idle,
+  normalRules,
+  type WorldRules,
   type Actor,
   type Action,
   type Bullet,
@@ -30,6 +32,7 @@ export class World {
   constructor(
     public level: Level,
     public runs: Run[] = [],
+    public rules: WorldRules = normalRules(),
   ) {
     this.actors = [...runs.map((run) => this.actor(run.number, run)), this.actor(0)];
     this.objects = level.objects.map((o) => ({ ...o }));
@@ -72,6 +75,7 @@ export class World {
     return ids.every((id) => this.signals.get(id));
   }
   solids(actor?: Actor): Rect[] {
+    if (actor && this.rules.noclip) return [];
     return [
       ...this.level.walls,
       ...this.level.doors.filter(
@@ -103,13 +107,14 @@ export class World {
       const count =
         this.actors.filter((a) => a.alive && distance(a, p) < 23).length +
         this.objects.filter((o) => o.holder === undefined && distance(o, p) < 23).length;
-      const active = count >= (p.need ?? 1);
+      const active = this.rules.power || count >= (p.need ?? 1);
       if (active !== (this.signals.get(p.id) ?? false))
         this.feedback.push({ ...p, kind: 'signal' });
       this.signals.set(p.id, active);
     }
     for (const s of this.level.switches)
       this.signals.set(s.id, (this.switchUntil.get(s.id) ?? -1) > this.tick);
+    if (this.rules.power) for (const id of this.signals.keys()) this.signals.set(id, true);
     for (const d of this.level.doors) {
       // A closing door waits until its footprint is clear; no crushing or trapping.
       const occupied =
@@ -179,6 +184,7 @@ export class World {
       });
   }
   kill(actor: Actor, cause: string) {
+    if (this.rules.god) return;
     if (!actor.alive) return;
     actor.alive = false;
     for (const o of this.objects.filter((o) => o.holder === actor.id)) {
@@ -199,6 +205,7 @@ export class World {
     }
   }
   laserActive(index: number) {
+    if (this.rules.power) return false;
     const l = this.level.lasers[index];
     if (l.signals.length && this.signal(l.signals)) return false;
     return !l.period || (this.tick / HZ + (l.phase ?? 0)) % l.period < (l.on ?? l.period / 2);

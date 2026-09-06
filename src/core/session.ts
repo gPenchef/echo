@@ -1,16 +1,21 @@
 import { World } from './world';
-import { type Level, type Run } from './types';
+import { normalRules, type WorldRules, type Level, type Run } from './types';
 export class Session {
   runs: Run[] = [];
   world: World;
   deaths = 0;
   retries = 0;
   commits = 0;
-  constructor(public level: Level) {
-    this.world = new World(level);
+  assisted: boolean;
+  constructor(
+    public level: Level,
+    public rules: WorldRules = normalRules(),
+  ) {
+    this.assisted = Object.values(rules).some(Boolean);
+    this.world = new World(level, [], rules);
   }
   reset() {
-    this.world = new World(this.level, this.runs);
+    this.world = new World(this.level, this.runs, this.rules);
   }
   retry() {
     this.retries++;

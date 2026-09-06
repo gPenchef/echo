@@ -65,7 +65,14 @@ try {
   // The opt-in URL unlocks chamber selection, but must not expose dev instrumentation.
   await page.goto('http://127.0.0.1:4173/?debug');
   await page.getByRole('button', { name: 'Chambers', exact: true }).click();
-  for (const name of ['The Concourse', 'Dead Letter', 'Switchyard']) {
+  for (const name of [
+    'The Concourse',
+    'Dead Letter',
+    'Switchyard',
+    'Ballast',
+    'Crossfire',
+    'Homecoming',
+  ]) {
     await page.locator('.level-button').filter({ hasText: name }).click();
     await page.getByRole('button', { name: 'Open chamber map' }).click();
     await page.getByRole('button', { name: 'Return to player view' }).waitFor();
@@ -78,9 +85,23 @@ try {
   }
   if (await page.evaluate(() => 'echoDebug' in window))
     throw new Error('Development instrumentation leaked into production debug URL');
+  await page.goto('http://127.0.0.1:4173/');
+  await page.getByRole('button', { name: 'Cheat codes', exact: true }).click();
+  await page.getByLabel('Enter a code').fill('WARP 17');
+  await page.getByRole('button', { name: 'Execute', exact: true }).click();
+  await page.keyboard.press('F2');
+  await page.locator('#code-GOD').click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await page.locator('#test-badge').waitFor();
+  await page.locator('#restart-level').click();
+  await page.getByRole('button', { name: 'Restart level now' }).click();
+  await page.locator('#test-badge').waitFor();
+  await page.keyboard.press('F2');
+  await page.locator('#code-NORMAL').click();
+  await page.locator('#test-badge').waitFor({ state: 'hidden' });
   if (errors.length) throw new Error(errors.join('\n'));
   console.log(
-    'Production smoke passed: assets, controls, pause, all large maps, and no browser errors.',
+    'Production smoke passed: assets, controls, restart, cheats, all large maps, and no browser errors.',
   );
 } finally {
   await browser?.close();
