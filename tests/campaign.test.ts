@@ -253,6 +253,25 @@ describe('campaign solvability', () => {
     expect(s.world.signals.get('A')).toBe(false);
     expect(s.world.doorOpen.get('A')).toBe(false);
   });
+  it('Crossfire rewards a one-Echo cargo solution below its suggested par', () => {
+    const s = new Session(campaign.find((level) => level.id === 'crossfire')!);
+    go(s, 220, 180);
+    commit(s);
+    at(s, 150);
+    go(s, 1100, 460);
+    go(s, 1100, 700);
+    ticks(s, 1, { interact: true });
+    expect(s.world.objects[0].holder).toBe(0);
+    go(s, 940, 780);
+    ticks(s, 1, { interact: true });
+    go(s, 1100, 460);
+    ticks(s, 65, { shoot: true, aim: 0 });
+    go(s, 1500, 460);
+    expect(s.world.status).toBe('complete');
+    expect(s.runs).toHaveLength(1);
+    expect(s.world.turretState[0].alive).toBe(false);
+    expect(s.world.actors[0].desync).toBe(false);
+  });
   campaign.forEach((level, i) =>
     it(`${i + 1}. ${level.name} is solvable at par with real inputs`, () => {
       const s = new Session(level);
